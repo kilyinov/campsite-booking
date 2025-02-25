@@ -106,6 +106,23 @@ public class BookingServiceImpl implements BookingService {
   }
 
   @Override
+  @Transactional(propagation = REQUIRES_NEW)
+  public Booking updateBookingIncorrectApproach(@Valid Booking booking) {
+
+    // update should not be used to cancel booking
+    checkArgument(booking.isActive(), "Booking must be active");
+    var existingBooking = findByUuidNotTransactional(booking.getUuid());
+    checkState(existingBooking.isActive(), "Non-active booking cannot be updated");
+    validateVacantDates(booking);
+
+    booking.setId(existingBooking.getId());
+    var bookingEntity = bookingMapper.toBookingEntity(booking);
+    var savedBookingEntity = bookingRepository.saveAndFlush(bookingEntity);
+
+    return bookingMapper.toBooking(savedBookingEntity);
+  }
+
+  @Override
   @Transactional
   public boolean cancelBooking(UUID uuid) {
 
